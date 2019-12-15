@@ -22,7 +22,7 @@ cameras = ["cam09", "cam11", "cam13"]
 
 
 # PAX and Bin detection files
-bin_file = "./info/info_offset.csv"
+bin_file = "./info/info.csv"
 
 pax_file_9 = "./info/cam09exp2_logs_fullv1.txt"
 pax_file_11 = "./info/cam11exp2_logs_fullv1.txt"
