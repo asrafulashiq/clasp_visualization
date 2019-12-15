@@ -138,7 +138,8 @@ class IntegratorClass:
                 pp = parse("'P{}-B{}'", each_split)
                 if pp is not None:
                     pax_id, bin_id = "P" + str(pp[0]), "B" + str(int(pp[1]))
-                    if "stealing" in pax_id:
+                    if ("stealing" in pax_id) or ("stoling" in pax_id):
+                        pax_id = pax_id.replace("stoling", "stealing")
                         if each_split not in self.tmp_msg:
                             asso_msg[frame] = [cam, frame, each_split]
                             self.tmp_msg.append(each_split)
