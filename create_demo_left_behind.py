@@ -1,5 +1,4 @@
 
-
 from pathlib import Path
 import cv2
 from tqdm import tqdm
@@ -32,6 +31,21 @@ nu_file_cam9 = "./info/cam_09_exp2_associated_events.csv"
 nu_file_cam11 = "./info/cam_11_exp2_associated_events.csv"
 nu_file_cam13 = "./info/cam_13_exp2_associated_events.csv"
 
+
+# Life of a bin and pax
+BIN = "B23"
+PAX = "P11"
+conf.skip_init = 8460
+conf.end_file = 13080
+conf.skip_end = None
+conf.delta = 2
+
+
+_BIN_COLOR = (33, 217, 14)
+_BIN_COLOR_RED = (217, 17, 14)
+
+current_color_bin = _BIN_COLOR
+bin_start_frame = -1
 
 
 def to_sec(frame, fps=30):
@@ -152,35 +166,30 @@ class IntegratorClass:
 
     def get_info_from_frame(self, frame, cam="cam09"):
 
-        logs = []
-
         # get pax info
         df = self.df_pax
         msglist = []
         info = df[(df["frame"] == frame) & (df["camera"] == cam)]
         list_info_pax = []
         list_event_pax = []
+
+        line_pt = [None, None]
         for _, row in info.iterrows():
             if row["type"] == "loc":
+                if row["id"] != PAX:
+                    continue
                 list_info_pax.append(
                     [row["id"], "pax", row["x1"], row["y1"], row["x2"], row["y2"]]
                 )
-                first_used = False
-                if row["id"] in self.item_first_used:
-                    first_used = True
-                    self.item_first_used.append(row["id"])
-                if "TSO" in row["id"]:
-                    pax_type = "TSO"
-                else:
-                    pax_type = "PAX"
-                log = (
-                    f"LOC: type: {pax_type} camera-num: {cam[3:5]} frame: {frame} time-offset: {frame/30:.2f} "
-                    + f"BB: {row['x1']*3}, {row['y1']*3}, {row['x2']*3}, {row['y2']*3} "
-                    + f"ID: {row['id']} PAX-ID: NA first-used: {first_used} "
-                    + "partial-complete: NA"
-                )
-                logs.append(log)
 
+                global bin_start_frame
+                if bin_start_frame == -1 and cam == "cam13":
+                    bin_start_frame = frame
+
+                #! SPECIFIC to LIFE_OF_A_BIN
+                cx = int((float(row['x1']) + float(row['x2']))/2)
+                cy = int((float(row['y1']) + float(row['y2']))/2)
+                line_pt[0] = (cx, cy)
         # get bin info
         # Generally, bins are extracted for each odd frame
         df = self.df_bin
@@ -189,10 +198,12 @@ class IntegratorClass:
         list_info_bin = []
         list_event_bin = []
 
-        asso_info = self.asso_info["cam09"]  # association from camera 09
+        asso_info = self.asso_info["cam09"]
         for _, row in info.iterrows():
             if row["type"] == "loc":
                 _id = "B" + str(row["id"])
+                if _id != BIN:
+                    continue
                 if _id in asso_info:
                     ffs = list(asso_info[_id])
                     for _f in ffs:
@@ -200,9 +211,7 @@ class IntegratorClass:
                             self.bin_pax[_id] = asso_info[_id][_f]
                 else:
                     pass
-                first_used = False
                 if _id in self.item_first_used:
-                    first_used = True
                     self.item_first_used.append(_id)
                 list_info_bin.append(
                     [
@@ -215,40 +224,26 @@ class IntegratorClass:
                         self.bin_pax.get(_id, ""),
                     ]
                 )
-                log = (
-                    f"LOC: type: DVI camera-num: {cam[3:5]} frame: {frame} time-offset: {frame/30:.2f} "
-                    + f"BB: {row['x1']*3}, {row['y1']*3}, {row['x2']*3}, {row['y2']*3} "
-                    + f"ID: {_id} PAX-ID: {self.bin_pax.get(_id, 'NA')} first-used: {first_used} "
-                    + "partial-complete: NA"
-                )
-                logs.append(log)
+
+                #! SPECIFIC to LIFE_OF_A_BIN
+                cx = int((float(row['x1']) + float(row['x2']))/2)
+                cy = int((float(row['y1']) + float(row['y2']))/2)
+                line_pt[1] = (cx, cy)
+
             else:  # event type
-                if (row["type"] == "enter" and cam == "cam09") or \
-                     row["type"] == "chng" or (row["type"] == "empty" and cam != "cam09"):
-                    # xfr event
-                    _id = "B" + str(row["id"])
-                    _type = "TO" if cam == "cam09" else "FROM"
-                    log = (
-                        f"XFR: type: {_type} camera-num: {cam[3:5]} frame: {frame} time-offset: {frame/30:.2f} "
-                        + f"BB: {row['x1']*3}, {row['y1']*3}, {row['x2']*3}, {row['y2']*3} "
-                        + f"owner-ID: {self.bin_pax.get(_id, 'NA')} DVI-ID: {_id} theft: False"
-                    )
-                    logs.append(log)
                 if row["type"] not in ("enter", "exit"):
-                    pass
-                else:
-                    pass
-                    # list_event_bin.append([row["type"], row["msg"]])
-                    # msglist.append([row["camera"][-2:], to_sec(row["frame"]), row["msg"]])
+                    continue
+                list_event_bin.append([row["type"], row["msg"]])
+                msglist.append([row["camera"][-2:], to_sec(row["frame"]), row["msg"]])
 
             if frame in self.asso_msg:
                 rr = self.asso_msg[frame]
-                if (cam + rr[2]) not in self.tmp:
+                if rr[2] not in self.tmp:
                     msglist.append([rr[0], to_sec(rr[1]), rr[2]])
-                    self.tmp.append(cam + rr[2])
+                    self.tmp.append(rr[2])
 
         return (list_info_bin, list_info_pax, list_event_bin, list_event_pax, msglist,
-                    logs)
+                    line_pt)
     
     def draw_im(self, im, info_bin, info_pax, font_scale=0.5):
         for each_i in info_bin:
@@ -258,7 +253,7 @@ class IntegratorClass:
                 bbox,
                 each_i[0],
                 each_i[-1],
-                color=(33, 217, 14),
+                color=current_color_bin,
                 thick=2,
                 font_scale=font_scale,
                 color_txt=(252, 3, 69),
@@ -284,11 +279,13 @@ if __name__ == "__main__":
     out_folder = {}
     imlist = []
 
+    conf.plot = True
+
     if conf.plot:
         vis_feed = VisFeed()  # Visualization class
 
         # Output folder path of the feed
-        feed_folder = Path(conf.out_dir) / "run" / file_num / "feed"
+        feed_folder = Path(conf.out_dir) / "demo" / "left_behind_1"
         if feed_folder.exists():
             shutil.rmtree(str(feed_folder))
         feed_folder.mkdir(exist_ok=True)
@@ -319,10 +316,6 @@ if __name__ == "__main__":
             )
         )
 
-    full_log_cam09 = []
-    full_log_cam11 = []
-    full_log_cam13 = []
-
     for out1, out2, out3 in tqdm(zip(*imlist)):
         im1, imfile1, _ = out1
         im2, imfile2, _ = out2
@@ -331,47 +324,55 @@ if __name__ == "__main__":
         frame_num = int(Path(imfile1).stem) - 1
 
         # Cam 09
-        info_bin, info_pax, event_bin, event_pax, msglist, logs = Info.get_info_from_frame(
+        info_bin, info_pax, event_bin, event_pax, msglist, lpt = Info.get_info_from_frame(
             frame_num, "cam09"
         )
-        full_log_cam09.extend(logs)
         if conf.plot:
             im1 = Info.draw_im(im1, info_bin, info_pax, font_scale=0.75)
+            if lpt[0] is not None and lpt[1] is not None:
+                cv2.line(im1, lpt[0], lpt[1], (235, 164, 52), thickness=3)
+                cv2.circle(im1, lpt[0], 3, (255, 0, 0), -1)
+                cv2.circle(im1, lpt[1], 3, (255, 0, 0), -1)
 
         # Cam 11
-        info_bin, info_pax, event_bin, event_pax, mlist, logs = Info.get_info_from_frame(
+        info_bin, info_pax, event_bin, event_pax, mlist, lpt = Info.get_info_from_frame(
             frame_num, "cam11"
         )
-        msglist.extend(mlist)
-        full_log_cam11.extend(logs)
         if conf.plot:
             im2 = Info.draw_im(im2, info_bin, info_pax, font_scale=0.7)
+            if lpt[0] is not None and lpt[1] is not None:
+                cv2.line(im2, lpt[0], lpt[1], (235, 164, 52), thickness=3)
+                cv2.circle(im2, lpt[0], 3, (255, 0, 0), -1)
+                cv2.circle(im2, lpt[1], 3, (255, 0, 0), -1)
 
         # Cam 13
         frame_num3 = int(Path(imfile3).stem) - 1
-        info_bin, info_pax, event_bin, event_pax, mlist, logs = Info.get_info_from_frame(
+        info_bin, info_pax, event_bin, event_pax, mlist, lpt = Info.get_info_from_frame(
             frame_num3, "cam13"
         )
-        msglist.extend(mlist)
-
-        full_log_cam13.extend(logs)
         if conf.plot:
+            
+            if bin_start_frame != -1 and (frame_num3 - bin_start_frame) > 900:
+                if frame_num3 % 30:
+                    if current_color_bin == _BIN_COLOR:
+                        current_color_bin = _BIN_COLOR_RED
+                    elif current_color_bin == _BIN_COLOR_RED:
+                        current_color_bin = _BIN_COLOR
+
             im3 = Info.draw_im(im3, info_bin, info_pax, font_scale=0.7)
+            if lpt[0] is not None and lpt[1] is not None:
+                cv2.line(im3, lpt[0], lpt[1], (235, 164, 52), thickness=3)
+                cv2.circle(im3, lpt[0], 3, (255, 0, 0), -1)
+                cv2.circle(im3, lpt[1], 3, (255, 0, 0), -1)
+
+            # plot red boundary to denote timer
+
 
         # News feed info
         if conf.plot:
             # get message
-            im_feed = vis_feed.draw(im1, im2, im3, frame_num, msglist)
+            msglist.extend(mlist)
+            im_feed = vis_feed.draw(im1, im2, im3, frame_num, msglist, with_feed=False)
 
             f_write = feed_folder / (str(frame_num).zfill(6) + ".jpg")
             skimage.io.imsave(str(f_write), im_feed)
-
-    # Write ata output file for scoring
-    with open("ata_cam9.txt", "w") as fp:
-        fp.write("\n".join(full_log_cam09))
-
-    with open("ata_cam11.txt", "w") as fp:
-        fp.write("\n".join(full_log_cam11))
-
-    with open("ata_cam13.txt", "w") as fp:
-        fp.write("\n".join(full_log_cam13))

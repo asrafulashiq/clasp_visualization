@@ -21,7 +21,7 @@ cameras = ["cam09", "cam11", "cam13"]
 
 
 # PAX and Bin detection files
-bin_file = "./info/info_offset.csv"
+bin_file = "./info/info.csv"
 
 pax_file_9 = "./info/cam09exp2_logs_fullv1.txt"
 pax_file_11 = "./info/cam11exp2_logs_fullv1.txt"
@@ -142,10 +142,13 @@ class IntegratorClass:
                 continue
             des = des[0]
             for each_split in des.split(","):
+                each_split = each_split.strip()
                 pp = parse("'P{}-B{}'", each_split)
                 if pp is not None:
                     pax_id, bin_id = "P" + str(pp[0]), "B" + str(int(pp[1]))
-                    if "stealing" in pax_id:
+                    if ("stealing" in pax_id) or ("stoling" in pax_id):
+                        pax_id = pax_id.replace("stoling", "stealing")
+                        each_split = each_split.replace("stoling", "stealing")
                         if each_split not in self.tmp_msg:
                             asso_msg[frame] = [cam, frame, each_split]
                             self.tmp_msg.append(each_split)
@@ -349,5 +352,5 @@ if __name__ == "__main__":
             msglist.extend(mlist)
             im_feed = vis_feed.draw(im1, im2, im3, frame_num, msglist, with_feed=False)
 
-            f_write = feed_folder / (str(frame_num).zfill(4) + ".jpg")
+            f_write = feed_folder / (str(frame_num).zfill(6) + ".jpg")
             skimage.io.imsave(str(f_write), im_feed)
