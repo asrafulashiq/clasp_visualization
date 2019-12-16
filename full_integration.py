@@ -246,7 +246,7 @@ class IntegratorClass:
 
             if frame in self.asso_msg:
                 rr = self.asso_msg[frame]
-                if rr[0] == cam:
+                if rr[0] == cam[3:5]:
                     if (cam + rr[2]) not in self.tmp:
                         msglist.append([rr[0], to_sec(rr[1]), rr[2]])
                         self.tmp.append(cam + rr[2])
@@ -264,7 +264,7 @@ class IntegratorClass:
                 im,
                 bbox,
                 each_i[0],
-                each_i[-1],
+                belongs_to,
                 color=(33, 217, 14),
                 thick=2,
                 font_scale=font_scale,

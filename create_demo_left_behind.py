@@ -285,7 +285,7 @@ if __name__ == "__main__":
     conf.plot = True
 
     if conf.plot:
-        vis_feed = VisFeed(max_msg=2)  # Visualization class
+        vis_feed = VisFeed(max_msg=3)  # Visualization class
 
         # Output folder path of the feed
         feed_folder = Path(conf.out_dir) / "demo" / "left_behind_1"
@@ -379,6 +379,7 @@ if __name__ == "__main__":
             if frame_num > 9440:
                 sec_pass = (frame_num - 9440) / 30
                 msglist = [
+                    ["", "", ""],
                     ["11", to_sec(frame_num) ,f"{PAX} out of view for {sec_pass:.2f} sec"], 
                     ["11", to_sec(frame_num), f"{BIN} left behind"]
                 ]
