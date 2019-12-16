@@ -48,6 +48,9 @@ current_color_bin = _BIN_COLOR
 bin_start_frame = -1
 
 
+PERSON_LEFT_BEHIND = 9440
+
+
 def to_sec(frame, fps=30):
     return str(int(frame) // fps) + "s"
 
@@ -282,7 +285,7 @@ if __name__ == "__main__":
     conf.plot = True
 
     if conf.plot:
-        vis_feed = VisFeed()  # Visualization class
+        vis_feed = VisFeed(max_msg=2)  # Visualization class
 
         # Output folder path of the feed
         feed_folder = Path(conf.out_dir) / "demo" / "left_behind_1"
@@ -351,9 +354,9 @@ if __name__ == "__main__":
             frame_num3, "cam13"
         )
         if conf.plot:
-            
             if bin_start_frame != -1 and (frame_num3 - bin_start_frame) > 900:
-                if frame_num3 % 30:
+                if frame_num3 % 30 == 0:
+                    # color switch
                     if current_color_bin == _BIN_COLOR:
                         current_color_bin = _BIN_COLOR_RED
                     elif current_color_bin == _BIN_COLOR_RED:
@@ -372,7 +375,15 @@ if __name__ == "__main__":
         if conf.plot:
             # get message
             msglist.extend(mlist)
-            im_feed = vis_feed.draw(im1, im2, im3, frame_num, msglist, with_feed=False)
+
+            if frame_num > 9440:
+                sec_pass = (frame_num - 9440) / 30
+                msglist = [
+                    ["11", to_sec(frame_num) ,f"{PAX} out of view for {sec_pass:.2f} sec"], 
+                    ["11", to_sec(frame_num), f"{BIN} left behind"]
+                ]
+
+            im_feed = vis_feed.draw(im1, im2, im3, frame_num, msglist, with_feed=True)
 
             f_write = feed_folder / (str(frame_num).zfill(6) + ".jpg")
             skimage.io.imsave(str(f_write), im_feed)

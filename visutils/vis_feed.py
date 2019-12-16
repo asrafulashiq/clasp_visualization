@@ -110,7 +110,6 @@ class FeedModule:
                 [int(i) for i in (x1, y1, x2, y2)]
             )
 
-
     def drawText(self, msg_list):
         for msg in msg_list:
             text = self.formatter.format(*msg)
@@ -144,7 +143,7 @@ class FeedModule:
 
 
 class VisFeed():
-    def __init__(self, width=1600, height=900, padding=0.02):
+    def __init__(self, width=1600, height=900, padding=0.02, max_msg=10):
         self.width = width
         self.height = height
         self.padding = padding  # in percentage
@@ -162,7 +161,7 @@ class VisFeed():
 
         # mod 4
         w_, h_ = int(self.width * m3), int(self.height)
-        self.im_mod_4 = FeedModule(w_, h_)
+        self.im_mod_4 = FeedModule(w_, h_, max_msg=max_msg)
 
     def draw(self, im1, im2, im3, frame_num, msglist, with_feed=True):
         can1 = self.im_mod_1.draw(im1, text=str(to_sec(frame_num)).zfill(4)+' sec')

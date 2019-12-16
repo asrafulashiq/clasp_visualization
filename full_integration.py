@@ -32,6 +32,9 @@ nu_file_cam9 = "./info/cam_09_exp2_associated_events.csv"
 nu_file_cam11 = "./info/cam_11_exp2_associated_events.csv"
 nu_file_cam13 = "./info/cam_13_exp2_associated_events.csv"
 
+TU_info = {
+    'P2': 'TU1', 'P3': 'TU1', 'P4': 'TU1', 'P7': 'TU1', 'P12': 'TU1', 'P13': 'TU1', 'P14': 'TU1'
+}
 
 
 def to_sec(frame, fps=30):
@@ -243,9 +246,10 @@ class IntegratorClass:
 
             if frame in self.asso_msg:
                 rr = self.asso_msg[frame]
-                if (cam + rr[2]) not in self.tmp:
-                    msglist.append([rr[0], to_sec(rr[1]), rr[2]])
-                    self.tmp.append(cam + rr[2])
+                if rr[0] == cam:
+                    if (cam + rr[2]) not in self.tmp:
+                        msglist.append([rr[0], to_sec(rr[1]), rr[2]])
+                        self.tmp.append(cam + rr[2])
 
         return (list_info_bin, list_info_pax, list_event_bin, list_event_pax, msglist,
                     logs)
@@ -253,6 +257,9 @@ class IntegratorClass:
     def draw_im(self, im, info_bin, info_pax, font_scale=0.5):
         for each_i in info_bin:
             bbox = [each_i[2], each_i[3], each_i[4], each_i[5]]
+            belongs_to = each_i[-1]
+            if each_i[-1] in TU_info:
+                belongs_to = TU_info[each_i[-1]]
             im = vis.vis_bbox_with_str(
                 im,
                 bbox,
@@ -266,11 +273,15 @@ class IntegratorClass:
 
         for each_i in info_pax:
             bbox = [each_i[2], each_i[3], each_i[4], each_i[5]]
+            if each_i[0] in TU_info:
+                tu_to = TU_info[each_i[0]]
+            else:
+                tu_to = None
             im = vis.vis_bbox_with_str(
                 im,
                 bbox,
                 each_i[0],
-                None,
+                tu_to,
                 color=(23, 23, 246),
                 thick=2,
                 font_scale=font_scale,
