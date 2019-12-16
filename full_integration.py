@@ -35,8 +35,9 @@ nu_file_cam13 = "./info/cam_13_exp2_associated_events.csv"
 # NOTE: Travel Unit info for exp2_train. Make it empty if we don't know TU info.
 # TU_info = {}
 TU_info = {
-    'P2': 'TU1', 'P3': 'TU1', 'P4': 'TU1', 'P7': 'TU1', 'P12': 'TU1', 'P13': 'TU1', 'P14': 'TU1'
+    'P2': 'TU1', 'P3': 'TU1', 'P4': 'TU1', 'P7': 'TU2', 'P12': 'TU3', 'P13': 'TU3', 'P14': 'TU3'
 }
+
 
 
 def to_sec(frame, fps=30):
